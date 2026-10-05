@@ -99,3 +99,21 @@ public GitHub source
 ```
 
 See `docs/RELEASE.md`.
+
+## Code signing policy
+
+Free code signing provided by SignPath.io, certificate by SignPath Foundation.
+
+### Team roles
+
+- Authors / Committers: minqiyusuf
+- Reviewers: minqiyusuf
+- Approvers: minqiyusuf
+
+### Privacy policy
+
+PDF Compressor processes PDF files locally on the user's computer.
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+Ghostscript is bundled as an open-source third-party PDF processing component and does not require any network connection for PDF compression.
