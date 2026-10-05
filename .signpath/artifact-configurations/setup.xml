@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="PDF_Compressor_Setup_1.0.0.exe">
+      <authenticode-sign description="PDF Compressor Setup" />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

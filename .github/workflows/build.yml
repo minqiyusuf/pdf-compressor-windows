@@ -1,0 +1,44 @@
+name: Build unsigned Windows installer
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare pinned Ghostscript runtime and source
+        shell: powershell
+        run: ./scripts/prepare-ghostscript.ps1
+
+      - name: Build unsigned payload
+        shell: powershell
+        run: ./scripts/build-payload.ps1
+
+      - name: Build unsigned Setup
+        shell: powershell
+        run: ./scripts/build-setup.ps1 -PayloadZip "${{ github.workspace }}\_build\Payload.zip"
+
+      - name: Upload unsigned Setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDF-Compressor-unsigned
+          path: dist/PDF_Compressor_Setup_1.0.0.exe
+          if-no-files-found: error
+
+      - name: Upload corresponding Ghostscript source
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ghostscript-10.08.0-source
+          path: dist/third-party-source/ghostscript-10.08.0.tar.xz
+          if-no-files-found: error

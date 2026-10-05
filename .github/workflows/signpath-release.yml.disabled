@@ -1,0 +1,96 @@
+name: Signed release with SignPath
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-sign-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare pinned Ghostscript runtime and source
+        shell: powershell
+        run: ./scripts/prepare-ghostscript.ps1
+
+      - name: Build unsigned payload
+        shell: powershell
+        run: ./scripts/build-payload.ps1
+
+      # SignPath requires the input to exist as a GitHub workflow artifact first.
+      - name: Upload unsigned payload
+        id: upload-unsigned-payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload-unsigned
+          path: _build/Payload.zip
+          if-no-files-found: error
+
+      - name: Sign application and uninstaller
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: 'PDF_Compressor'
+          signing-policy-slug: 'release-signing'
+          artifact-configuration-slug: 'payload'
+          github-artifact-id: '${{ steps.upload-unsigned-payload.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: '_signed_payload'
+
+      - name: Locate signed payload
+        id: signed-payload
+        shell: powershell
+        run: |
+          $payload = Get-ChildItem "_signed_payload" -Filter "Payload.zip" -Recurse | Select-Object -First 1
+          if (-not $payload) { throw "Signed Payload.zip was not found." }
+          "path=$($payload.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Build Setup with signed inner executables
+        shell: powershell
+        run: ./scripts/build-setup.ps1 -PayloadZip "${{ steps.signed-payload.outputs.path }}"
+
+      - name: Upload unsigned outer Setup
+        id: upload-unsigned-setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: setup-unsigned
+          path: dist/PDF_Compressor_Setup_1.0.0.exe
+          if-no-files-found: error
+
+      - name: Sign final Setup
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: 'PDF_Compressor'
+          signing-policy-slug: 'release-signing'
+          artifact-configuration-slug: 'setup'
+          github-artifact-id: '${{ steps.upload-unsigned-setup.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: '_signed_setup'
+
+      - name: Upload signed release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDF-Compressor-signed
+          path: _signed_setup
+          if-no-files-found: error
+
+      - name: Upload corresponding Ghostscript source
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ghostscript-10.08.0-source
+          path: dist/third-party-source/ghostscript-10.08.0.tar.xz
+          if-no-files-found: error
